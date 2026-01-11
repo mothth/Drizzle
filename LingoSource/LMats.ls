@@ -189,6 +189,277 @@ on LRenderTileMaterial(l: number, nm: string, frntImg)
   return frntImg
 end
 
+on LRenderPatternMaterial(l: number, nm: string, frntImg)
+  -- Custom Temple Stone and Tiled Stone materials (made by Of Incandescence)
+  if (DRCustomMatList.count >= 1) then
+    matTl = DRCustomMatList[DRLastTL]
+
+    if (matTl.nm <> nm) then
+      repeat with inti = 1 to DRCustomMatList.count
+        if (DRCustomMatList[inti].nm = nm) then
+          matTl = DRCustomMatList[inti]
+          DRLastTL = inti
+          exit repeat
+        end if
+      end repeat
+    end if
+
+    if (matTl.nm = nm) then
+
+      matInfo = matTl.pattern
+      pickPattern: list = []
+      pickTiles: list = []
+      pattern: list = []
+      tileSelection: list = []
+      repeatSize = point(0,0)
+      savSeed = the randomSeed
+      the randomSeed = gLOprops.tileSeed + l
+      
+      if matInfo.findPos(#pattern) then
+        pattern = matInfo.pattern.duplicate()
+        repeat with pat in pattern
+          pickPattern.add(pat[1])
+        end repeat
+      end if
+
+      if matInfo.findPos(#tiles) then
+        pickTiles = matInfo.tiles
+        repeat with tl in pickTiles
+          tileSelection.add([])
+        end repeat
+      end if
+
+      if matInfo.findPos(#sz) then
+        repeatSize = matInfo.sz
+      end if
+
+      -- Find tiles with our material
+      tlsOrdered: list = []
+      repeat with q = 1 to gLOprops.size.loch
+        repeat with c = 1 to gLOprops.size.locv
+          LEPropqc = gLEProps.matrix[q][c][l][1]
+          if (LEPropqc <> 0) then
+            addMe: number = 0
+            TEPropqc = gTEprops.tlMatrix[q][c][l]
+            if(TEPropqc.tp = "material") then
+              if(TEPropqc.data = matTl.nm) then
+                addMe = 1
+              end if
+            else if (gTEprops.defaultMaterial = matTl.nm)then
+              if (TEPropqc.tp = "default")then
+                addMe = 1
+              end if
+            end if
+            
+            if(addMe)then
+              tlsOrdered.add([random(gLOprops.size.loch + gLOprops.size.locV), point(q, c)])
+            end if
+          end if
+        end repeat
+      end repeat
+      
+      tlsOrdered.sort()
+      tls: list = []
+      repeat with q = 1 to tlsOrdered.count
+        tls.add(tlsOrdered[q][2])
+      end repeat
+      
+      -- Grab tiles
+      geoTiles = [[], [], [], [], []] -- NE, NW, SE, SW, Floor
+      repeat with tlGrp in gTiles then
+        repeat with tl in tlGrp.tls then
+          -- Check misc tiles
+          pos = pickTiles.getPos(tl.nm)
+          if (pos <> 0) then
+            -- Check if slope or floor
+            if (tl.sz = point(1, 1)) and (tl.specs[1] > 1) and (tl.specs[1] < 7) then
+              geoTiles[tl.specs[1] - 1] = tl
+            -- Not slope
+            else
+              tileSelection[pos] = tl
+            end if
+          end if
+
+          -- Check pattern tiles
+          pos = pickPattern.getPos(tl.nm)
+          repeat while (pos <> 0) then
+            if (pattern[pos].count = 2) then
+              pattern[pos].add(tl)
+
+              -- Check for tile slopes
+              tileCorners = []
+              repeat with speci = 1 to tl.specs.count then
+                geo = tl.specs[speci]
+                if (geo > 1) and (geo < 6) then
+                  loc = point(((speci - 1) / tl.sz.locV - 0.4999).integer, (speci - 1) mod tl.sz.locV)
+                  tileCorners.add([geo - 1, loc])
+                end if
+              end repeat
+
+              if (tileCorners.count >= 1) then
+                pattern[pos].add(tileCorners)
+              end if
+            end if
+
+            pickPattern[pos] = ""
+            pos = pickPattern.getPos(tl.nm)
+          end repeat
+        end repeat
+      end repeat
+
+      tls2 = tls.duplicate()
+      patternCorners = [[], [], [], []]
+
+      -- Draw pattern
+      repeat with q = 1 to tls2.count then
+        tlPos = tls2[q]
+
+        repeat with pat in pattern then
+          if (pat.count > 2) then
+
+            tl = pat[3]
+            if ((tlPos.locV mod repeatSize.locV) = pat[2].locV) then
+              if ((tlPos.locH mod repeatSize.locH) = pat[2].locH) then
+
+                canDraw: number = 1
+                mdPnt = point(((tl.sz.locH*0.5)+0.4999).integer - 1, ((tl.sz.locV*0.5)+0.4999).integer - 1)
+                occupy = []
+
+                repeat with x = 0 to tl.sz.locH-1 then
+                  repeat with y = 0 to tl.sz.locV-1 then
+                    -- Only check solid geo
+                    if (tl.specs[x * tl.sz.locV + y + 1] <> 1) then
+                      next repeat
+                    end if
+
+                    loc = point(x,y) - mdPnt
+                    if (checkIfATileIsSolidAndSameMaterial(tlPos + loc, l, nm) = 0) then
+                      canDraw = 0
+                      exit repeat
+                    end if
+                    occupy.add(loc)
+                  end repeat
+                  if (canDraw = 0) then exit repeat
+                end repeat
+
+                if (canDraw = 1) then
+                  frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, tl, frntImg)
+                  
+                  -- Corners
+                  if (pat.count > 3) then
+                    repeat with corner in pat[4] then
+                      loc = corner[2] - mdPnt
+                      if (checkIfATileIsSolidAndSameMaterial(tlPos + loc, l, nm)) then
+                        patternCorners[corner[1]].add(tlPos + loc)
+                      end if
+                      tls.deleteOne(tlPos + loc)
+                    end repeat
+                  end if
+                  
+                  repeat with occ = 1 to occupy.count then
+                    tls.deleteOne(tlPos + occupy[occ])
+                  end repeat
+
+                end if
+              end if
+            end if
+          end if
+          
+        end repeat
+      end repeat
+
+      -- Draw remaining corners
+      
+      repeat with q = 1 to patternCorners[1].count then
+        ind = patternCorners[1].count + 1 - q
+        tlPos = patternCorners[1][ind]
+        ind2 = patternCorners[4].getPos(tlPos)
+        if (ind2 > 0) then
+          patternCorners[4].deleteAt(ind2)
+          -- patternCorners[1].deleteAt(ind)
+          next repeat
+        end if
+        frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, geoTiles[4], frntImg)
+      end repeat
+
+      repeat with q = 1 to patternCorners[2].count then
+        ind = patternCorners[2].count + 1 - q
+        tlPos = patternCorners[2][ind]
+        ind2 = patternCorners[3].getPos(tlPos)
+        if (ind2 > 0) then
+          patternCorners[3].deleteAt(ind2)
+          -- patternCorners[2].deleteAt(ind)
+          next repeat
+        end if
+        frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, geoTiles[3], frntImg)
+      end repeat
+
+      repeat with q = 1 to patternCorners[3].count then
+        tlPos = patternCorners[3][q]
+        frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, geoTiles[2], frntImg)
+      end repeat
+
+      repeat with q = 1 to patternCorners[4].count then
+        tlPos = patternCorners[4][q]
+        frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, geoTiles[1], frntImg)
+      end repeat
+
+      -- Draw remaining slopes and floors
+      cnt = tls.count
+      repeat with q = 1 to cnt then
+        tl = tls[cnt + 1 - q]
+        geo = afaMvLvlEdit(point(tl.locH, tl.locV), l)
+        if (geo > 1) and (geo < 7) then
+          frntImg = drawATileTile(tl.locH,tl.locV,l, geoTiles[geo - 1], frntImg)
+          tls.deleteAt(cnt + 1 - q)
+        else if (geo <> 1) then
+          tls.deleteAt(cnt + 1 - q)
+        end if
+      end repeat
+
+      -- Draw everything else
+      repeat while tls.count > 0 then
+        tlPos = tls[random(tls.count)]
+ 
+        repeat with tl in tileSelection
+          if (tl = []) then
+            next repeat
+          end if
+
+          drawn = true
+          mdPnt = point(((tl.sz.locH*0.5)+0.4999).integer - 1, ((tl.sz.locV*0.5)+0.4999).integer - 1)
+          occupy = []
+
+          repeat with x = 0 to tl.sz.locH-1 then
+            repeat with y = 0 to tl.sz.locV-1 then
+              loc = point(x,y) - mdPnt
+              if (checkIfATileIsSolidAndSameMaterial(tlPos + loc, l, nm) = 0) or \
+                (tls.getPos(tlPos + loc) = 0) then
+                drawn = false
+                exit repeat
+              end if
+              occupy.add(loc)
+            end repeat
+            if (drawn = false) then exit repeat
+          end repeat
+
+          if (drawn) then
+            frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, tl, frntImg)
+            repeat with q = 1 to occupy.count then
+              tls.deleteOne(tlPos + occupy[q])
+            end repeat
+            exit repeat
+          end if
+
+        end repeat
+
+        tls.deleteOne(tlPos)
+      end repeat
+
+    end if
+  end if
+  return frntImg
+end
 
 on LDrawATileMaterial(q, c, l, nm) --frntImg,
   if (DRCustomMatList.count >= 1) then

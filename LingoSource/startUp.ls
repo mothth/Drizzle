@@ -216,6 +216,7 @@ on exitFrame me
               matTl[#sz] = point(1, 1)
               matTl[#specs] = [0]
               if matTl.findPos(#autofit) then matTl[#renderType] = "customAutofit"
+              else if matTl.findPos(#pattern) then MatTl[#renderType] = "customPattern"
               else matTl[#renderType] = "customUnified"
               DRCustomMatList.add(matTl)
               
@@ -251,6 +252,35 @@ on exitFrame me
                       3:
                         matTl.autofit.ignoreTiles.append(matLn)
                     end case
+                  end if
+                end repeat
+              end if
+
+              -- Deal with pattern material
+              if (matTl[#renderType] = "customPattern") then
+                afMat = member("initImport")
+                afMat.text = ""
+                member("initImport").importFileInto("Materials/" & matTl.nm & ".txt")
+                afMat.name = "initImport"
+
+                -- Make sure parts are correct
+                if (not matTl.pattern.findPos(#pattern)) then matTl.pattern[#pattern] = []
+                if (not matTl.pattern.findPos(#tiles)) then matTl.pattern[#tiles] = []
+
+                -- Import information
+                importPart = 1 -- pattern by default
+                repeat with matLnNo = 1 to the number of lines in afMat.text
+                  matLn = afMat.text.line[matLnNo]
+                  if (matLn = "-Pattern") then
+                    importPart = 1
+                  else if (matLn = "-Tiles") then
+                    importPart = 2
+                  else if (matLn <> "") then
+                    if (importPart = 1) then
+                      matTl.pattern.pattern.append(value(matLn))
+                    else
+                      matTl.pattern.tiles.append(matLn)
+                    end if
                   end if
                 end repeat
               end if

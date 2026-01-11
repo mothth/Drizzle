@@ -210,6 +210,9 @@ on setUpLayer(layer)
         "customAutofit":
           frntImg = LRenderTileMaterial(layer, drawMaterials[q][1], frntImg)
           
+        "customPattern":
+          frntImg = LRenderPatternMaterial(layer, drawMaterials[q][1], frntImg)
+          
         "pipeType":
           repeat with tl in drawMaterials[q][2] then
             -- frntImg = drawATileMaterial(tl[2], tl[3], layer, pltt, drawTiles[q][1], frntImg)

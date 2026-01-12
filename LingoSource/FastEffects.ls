@@ -134,8 +134,12 @@ on applySlimeOnTile me, pnt, dmin, dmax, lr, cl, clA, clB, clDc
   if (nwLr > 1) then
     strAbLr = string(nwLr-2)
     layerAbLr = member("layer" & strAblr).image
-    if (layerAbLr.getPixel(pnt + point(0, lgt)) <> DRWhite) then
-      return
+    pnt2 = pnt + point(ofst, lgt)
+    if (layerAbLr.getPixel(pnt2) <> DRWhite) then
+      -- Preserve slimy walls and poles and such
+      if (layerAbLr.getPixel(pnt2 + point(5, 0)) <> DRWhite) and (layerAbLr.getPixel(pnt2 - point(5, 0)) <> DRWhite) then
+        return
+      end if
     end if
   end if
 

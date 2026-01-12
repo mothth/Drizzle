@@ -1,4 +1,9 @@
 -- Faster effects for the Render Optimisations option. Mostly written by Of Incandescence
+-- If you going to write a custom effect, do not implement it here,
+-- and ensure it is accessible by the old path (west, past the farm arrays) so it will work with Render Optimisations disabled.
+-- Ideally, although optional, a custom effect would be compatible with the fast path,
+-- i.e. your effect code is contained in a function with the same parameters as the `apply<effect>OnTile` functions here.
+-- Explore the parent functions to see how to hook your effect into the fast path directly.
 global vertRepeater, r, gEEprops, solidMtrx, gLEprops, colr, colrDetail, colrInd, gdLayer, gdDetailLayer, gdIndLayer, gLOProps, gLevel, gEffectProps, gRenderCameraTilePos, effectSeed, lrSup, chOp, fatOp, gradAf, effectIn3D, gAnyDecals, gRotOp, slimeFxt, DRDarkSlimeFix, DRWhite, DRPxl, DRPxlRect, effSide, gCustomEffects, gEffects, gLastImported, skyRootsFix, lampColr, lampLayer
 
 -- It's going to take awhile before everything is ported over, if they ever are...

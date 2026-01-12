@@ -116,3 +116,4 @@ type GL_drPos:                    number
 type gCustomLights:               list
 type gFSLastTm:                   number
 type gFSFlag:                     number
+type fastRendering:               number

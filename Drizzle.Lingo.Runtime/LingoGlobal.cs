@@ -500,13 +500,25 @@ public sealed partial class LingoGlobal
     }
 
     public dynamic sound(object a) => throw new NotImplementedException();
-    public dynamic call(LingoSymbol a) => throw new NotImplementedException();
-    public dynamic call(LingoSymbol a, dynamic a1) => throw new NotImplementedException();
-    public dynamic call(LingoSymbol a, dynamic a1, dynamic a2) => throw new NotImplementedException();
-    public dynamic call(LingoSymbol a, dynamic a1, dynamic a2, dynamic a3) => throw new NotImplementedException();
 
-    public dynamic call(LingoSymbol a, dynamic a1, dynamic a2, dynamic a3, dynamic a4) =>
-        throw new NotImplementedException();
+    // Of Incandescence: We can't use adobe director on our system, and this was not implemented before-hand... gulp
+    // Here's hoping things work!
+    // `call` is also apparently supposed to work with lists of scripts, but that's not implemented here.
+    public dynamic call(LingoSymbol a, dynamic script, params dynamic[] args)
+    {
+        Type type = script.GetType();
+        if (type.IsClass)
+        {
+            var method = type.GetMethod(a.Value);
+            if (method is not null)
+            {
+                return method.Invoke(script, args);
+            }
+        }
+
+        // TODO: Decide better exception
+        throw new NotSupportedException();
+    }
 
     public static string chars(string str, LingoNumber first, LingoNumber last)
     {

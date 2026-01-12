@@ -1,5 +1,5 @@
 global gTiles, tileSetIndex, gCurrentRenderCamera, gAnyDecals, firstCamRepeat, solidMtrx, gLOprops, gLEprops, gTEprops, gDRMatFixes, gDRInvI, grimeActive, grimeOnGradients, bkgFix, gRRSpreadsMore, slimeFxt
-global DRWhite, DRPxl, DRPxlRect, DRDarkSlimeFix
+global DRWhite, DRPxl, DRPxlRect, DRDarkSlimeFix, fastRendering
 
 on exitFrame me
   DRPxl = member("pxl").image
@@ -13,6 +13,7 @@ on exitFrame me
   bkgFix = getBoolConfig("Gradients with BackgroundScenes fix")
   gDRMatFixes = getBoolConfig("Material fixes")
   gDRInvI = getBoolConfig("Invisible material fix")
+  fastRendering = getBoolConfig("Render Optimisations")
   member("blackOutImg1").image = image(1, 1, 1)
   member("blackOutImg2").image = image(1, 1, 1)
   member("GradientOutput").image = image(1,1,1)

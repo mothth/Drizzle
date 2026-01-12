@@ -1,5 +1,5 @@
 global vertRepeater, r, gEEprops, solidMtrx, gLEprops, colr, colrDetail, colrInd, gdLayer, gdDetailLayer, gdIndLayer, gLOProps, gLevel, gEffectProps, gViewRender, keepLooping, gRenderCameraTilePos, effectSeed, lrSup, chOp, fatOp, gradAf, effectIn3D, gAnyDecals, gRotOp, slimeFxt, DRDarkSlimeFix, DRWhite, DRPxl, DRPxlRect, colrIntensity, fruitDensity, leafDensity, mshrSzW, mshrSz, hasFlowers, effSide, fingerLen, fingerSz, gCustomEffects, gEffects, gLastImported, skyRootsFix, lampColr, lampLayer
-global blobSize, growOnWalls, needsAttach
+global blobSize, growOnWalls, needsAttach, fastRendering
 
 
 on exitFrame(me)
@@ -56,30 +56,47 @@ on newFrame me
   end if
   
   effectr = gEEprops.effects[r]
-  if (effectr.crossScreen = 0) then -- if we're not moving onto the next screen, (or maybe this just means we're not on the first screen?? no fucking clue. doesn't really matter anway.)
-    sprite(59).locV = vertRepeater*20 -- i think this moves that big line across the screen that shows where the effect is being applied? no clue.
-    
-    -- render all of the tiles within this row.
-    repeat with q = 1 to 100
-      q2 = q + gRenderCameraTilePos.locH
-      c2 = vertRepeater + gRenderCameraTilePos.locV
-      if (q2 > 0) then
-        if (q2 <= gLOprops.size.locH) then
-          if (c2 > 0) then
-            if (c2 <= gLOprops.size.locV) then
-              me.effectOnTile(q, vertRepeater, q2, c2, effectr)
+
+  drawn = 0
+  if (fastRendering) then
+    fromq = restrict(gRenderCameraTilePos.locH + 1, 1, gLOprops.size.locH)
+    toq = restrict(gRenderCameraTilePos.locH + 100, 1, gLOprops.size.locH)
+    row = vertRepeater + gRenderCameraTilePos.locV
+    if (row > 0) and (row <= gLOprops.size.locV) then
+      drawn = script("FastEffects").fastEffectProcess(fromq, toq, row, effectr)
+      if (drawn) then
+        sprite(59).locV = vertRepeater*20
+      end if
+    end if
+  end if
+
+  if (drawn = 0) then
+    -- Vanilla effect rendering path
+    if (effectr.crossScreen = 0) then -- if we're not moving onto the next screen, (or maybe this just means we're not on the first screen?? no fucking clue. doesn't really matter anway.)
+      sprite(59).locV = vertRepeater*20 -- i think this moves that big line across the screen that shows where the effect is being applied? no clue.
+
+      -- render all of the tiles within this row.
+      repeat with q = 1 to 100
+        q2 = q + gRenderCameraTilePos.locH
+        c2 = vertRepeater + gRenderCameraTilePos.locV
+        if (q2 > 0) then
+          if (q2 <= gLOprops.size.locH) then
+            if (c2 > 0) then
+              if (c2 <= gLOprops.size.locV) then
+                me.effectOnTile(q, vertRepeater, q2, c2, effectr)
+              end if
             end if
           end if
         end if
-      end if
-    end repeat
-  else -- otherwise...
-    -- uhh just do the same thing i guess??
-    repmcam = vertRepeater - gRenderCameraTilePos.locV
-    sprite(59).locV = repmcam * 20
-    repeat with q2 = 1 to gLOprops.size.locH
-      me.effectOnTile(q2 - gRenderCameraTilePos.locH, repmcam, q2, vertRepeater, effectr)
-    end repeat
+      end repeat
+    else -- otherwise...
+      -- uhh just do the same thing i guess??
+      repmcam = vertRepeater - gRenderCameraTilePos.locV
+      sprite(59).locV = repmcam * 20
+      repeat with q2 = 1 to gLOprops.size.locH
+        me.effectOnTile(q2 - gRenderCameraTilePos.locH, repmcam, q2, vertRepeater, effectr)
+      end repeat
+    end if
   end if
 end
 

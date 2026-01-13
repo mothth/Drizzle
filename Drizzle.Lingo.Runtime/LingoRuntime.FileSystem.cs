@@ -6,7 +6,8 @@ namespace Drizzle.Lingo.Runtime;
 
 public partial class LingoRuntime
 {
-    public static readonly string MovieBasePath;
+    // Rained needs readonly commented out to work
+    public static /*readonly*/ string MovieBasePath;
 
     static LingoRuntime()
     {

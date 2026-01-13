@@ -17,6 +17,9 @@ on fastEffectProcess(fromq: number, toq: number, row: number, effectr)
     "standardErosion":
       return applyFastStandardErosion(fromq, toq, row, effectr)
 
+    "BlackGoo":
+      return applyFastBlackGoo(fromq, toq, row)
+
     otherwise:
       -- Everything else just render using the usual code, lol
       return 0
@@ -24,10 +27,46 @@ on fastEffectProcess(fromq: number, toq: number, row: number, effectr)
   end case
 end
 
+on getFast3DLr(lr, dmin, dmax)
+  nwLr = restrict(lr - 2 + random(3), dmin, dmax)
+  if (lr = 6) and (nwLr = 5) then
+    nwLr = 6
+  else if (lr = 5) and (nwLr = 6) then
+    nwLr = 5
+  end if
+  return nwLr
+end 
+
+-- This is the post-process of black goo? Most of the work seems to be done in renderEffects.ls
+-- That likely doesn't need optimising, and this didn't really either, black goo on Drizzle is quite fast already.
+-- Wonder how it performs on director...? We remember black goo being very slow.
+on applyFastBlackGoo(fromq: number, toq: number, row: number)
+  rct: rect = member("blob").image.rect
+  layer0: image = member("layer0").image
+  black1: image = member("blackOutImg1").image
+  black2: image = member("blackOutImg2").image
+  blob: image = member("blob").image
+  c: number = row - gRenderCameraTilePos.locV
+  fromq = fromq - gRenderCameraTilePos.locH
+  toq = toq - gRenderCameraTilePos.locH
+
+  repeat with q = fromq to toq
+    sPnt: point = giveMiddleOfTile(point(q,c))+point(-10,-10)
+    repeat with d = 1 to 10 then
+      repeat with e = 1 to 10 then
+        ps: point = point(sPnt.locH + d*2, sPnt.locV + e*2)
+        if layer0.getPixel(ps) = DRWhite then
+          black1.copyPixels(blob, rect(ps.locH-6-random(random(11)),ps.locV-6-random(random(11)),ps.locH+6+random(random(11)),ps.locV+6+random(random(11))), rct, {#color:0, #ink:36})
+          black2.copyPixels(blob, rect(ps.locH-7-random(random(14)),ps.locV-7-random(random(14)),ps.locH+7+random(random(14)),ps.locV+7+random(random(14))), rct, {#color:0, #ink:36})
+        end if 
+      end repeat
+    end repeat
+  end repeat
+end
+
 on applyFastStandardErosion(me, fromq: number, toq: number, row: number, effectr)
   affop: number = effectr.affectOpenAreas
   c: number = row - gRenderCameraTilePos.locV
-  applyFunc = VOID
 
   -- Map effects to applyFunc
   case effectr.nm of
@@ -134,7 +173,7 @@ on applySlimeOnTile(pnt: point, dmin: number, dmax: number, lr: number, layerlr:
   ofst: number = random(2) - 1
   lgt: number = 3 + random(random(random(6)))
   if (effectIn3D) then
-    nwLr: number = get3DLr(lr)
+    nwLr: number = getFast3DLr(lr, dmin, dmax)
   else
     nwLr: number = restrict(lr - 1 + random(2), dmin, dmax)
   end if
@@ -199,7 +238,7 @@ on applyRustOnTile(pnt: point, dmin: number, dmax: number, lr: number, layerlr: 
   if (cl = DRWhite) then return
 
   if (effectIn3D) then
-    nwLr = get3DLr(lr)
+    nwLr = getFast3DLr(lr, dmin, dmax)
     strnwlr = string(nwLr)
     layernwlr = member("layer"&strnwlr).image
   else
@@ -232,16 +271,6 @@ on applyRustOnTile(pnt: point, dmin: number, dmax: number, lr: number, layerlr: 
   end if
 end
 
-on get3DLr me, lr, dmin, dmax
-  nwLr = restrict(lr - 2 + random(3), dmin, dmax)
-  if (lr = 6) and (nwLr = 5) then
-    nwLr = 6
-  else if (lr = 5) and (nwLr = 6) then
-    nwLr = 5
-  end if
-  return nwLr
-end 
-
 -- Barnacles
 on applyBarnaclesOnTile(pnt: point, dmin: number, dmax: number, lr: number, layerlr: image, galr: image, gblr: image, dclr: image)
   pnt = pnt + degToVec(random(360))*4
@@ -249,7 +278,7 @@ on applyBarnaclesOnTile(pnt: point, dmin: number, dmax: number, lr: number, laye
   if (cl = DRWhite) then return
 
   if (effectIn3D) then
-    nwLr: number = get3DLr(lr)
+    nwLr: number = getFast3DLr(lr, dmin, dmax)
   else
     nwLr: number = restrict(lr - 1 + random(2), dmin, dmax)
   end if

@@ -42,6 +42,10 @@ on applyFastStandardErosion(me, fromq: number, toq: number, row: number, effectr
     -- Barnacles
     "Barnacles":
       applyFunc = #applyBarnaclesOnTile
+    
+    -- Roughen
+    "Roughen":
+      applyFunc = #applyRoughenOnTile
 
     otherwise:
       -- Skip and do regular effect rendering path
@@ -301,3 +305,23 @@ on applyBarnaclesOnTile(pnt: point, dmin: number, dmax: number, lr: number, laye
 
   end if
 end if
+
+
+-- Roughen
+on applyRoughenOnTile(pnt: point, dmin: number, dmax: number, lr: number, layerlr: image, galr: image, gblr: image, dclr: image)
+  cl: color = layerlr.getPixel(pnt)
+  if (cl = color(0, 255, 0)) then
+    roughenImg: image = member("roughenTexture").image
+    var: number = random(20)
+    repeat with lch = 0 to 6
+      repeat with lcv = 0 to 6
+        if(layerlr.getPixel(pnt.locH-3+lch, pnt.locV-3+lcv) = color(0, 255, 0))then
+          gtCl: color = roughenImg.getPixel(lch+(var-1)*7, lcv)
+          if gtCl <> DRWhite then
+            layerlr.setPixel(pnt.locH-3+lch, pnt.locV-3+lcv, gtCl)
+          end if
+        end if
+      end repeat
+    end repeat
+  end if
+end

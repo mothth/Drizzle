@@ -230,7 +230,10 @@ on exitFrame me
                 -- Make sure parts are correct
                 if (not ilk(matTl.autofit, #proplist)) then matTl.autofit = [:]
                 if (not matTl.autofit.findPos(#categories)) then matTl.autofit[#categories] = []
-                if (not matTl.autofit.findPos(#tiles)) then matTl.autofit[#tiles] = []
+                if (not matTl.autofit.findPos(#tiles)) then
+                  matTl.autofit[#tiles] = []
+                  matTl.autofit[#tileWeights] = []
+                end if
                 if (not matTl.autofit.findPos(#ignoreTiles)) then matTl.autofit[#ignoreTiles] = []      
                 
                 -- Import information
@@ -248,7 +251,20 @@ on exitFrame me
                       1:
                         matTl.autofit.categories.append(matLn)
                       2:
+                        weight = 1
+                        if (MatLn contains ":") then
+                          -- Weight
+                          wOffset = offset(":", matLn)
+                          weight = value(matLn.char[(wOffset+1)..(matLn.length)])
+                          matLn = matLn.char[1..(wOffset-1)]
+                          -- Remove trailing spaces
+                          repeat while (the last char of matLn) = " " then -- matLn.char[matLn.length] gives nothing if whitespace?? forced into lingo-english
+                            -- delete the last char of matLn -- This lingo-english doesnt work in Drizzle
+                            matLn = matLn.char[1..(matLn.length-1)]
+                          end repeat
+                        end if
                         matTl.autofit.tiles.append(matLn)
+                        matTl.autofit.tileWeights.append(weight)
                       3:
                         matTl.autofit.ignoreTiles.append(matLn)
                     end case

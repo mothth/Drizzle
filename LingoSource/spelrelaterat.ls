@@ -18,6 +18,17 @@ on restrict(val, low, high)
   end if
 end
 
+-- Using the hack as seen everywhere else... Did lingo NOT provide floor and ceil functions out of the box?!?!?
+on floorPoint(pnt: point)
+  type return: point
+  return point((pnt.locH-0.4999).integer, (pnt.locV-0.4999).integer)
+end
+
+on ceilPoint(pnt: point)
+  type return: point
+  return point((pnt.locH+0.4999).integer, (pnt.locV+0.4999).integer)
+end
+
 on restrictWithFlip(val: number, low: number, high: number)
   type return: number
   if (val < low) then

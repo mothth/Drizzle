@@ -888,7 +888,7 @@ on drawRidgeTypeTile(mat, tl, layer, frntImg)
   the randomSeed = savSeed
 end
 
-
+-- TODO: `offL` only affects voxelStruct, but should apply to other types
 on drawATileTile(q: number, c: number, l: number, tl, frntImg: image, dt: list, offsL: number)
   
   global gAnyDecals

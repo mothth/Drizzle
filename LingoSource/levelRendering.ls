@@ -889,7 +889,7 @@ on drawRidgeTypeTile(mat, tl, layer, frntImg)
 end
 
 
-on drawATileTile(q: number, c: number, l: number, tl, frntImg: image, dt: list)
+on drawATileTile(q: number, c: number, l: number, tl, frntImg: image, dt: list, offsL: number)
   
   global gAnyDecals
   
@@ -983,7 +983,7 @@ on drawATileTile(q: number, c: number, l: number, tl, frntImg: image, dt: list)
       else
         dp = 20
       end if
-      
+
       rct = rect(strt*20, (strt+tl.sz)*20)+rect(-20*tl.bfTiles, -20*tl.bfTiles, 20*tl.bfTiles, 20*tl.bfTiles)+rect(-20, -20, -20, -20)
       gtRect = rect(0,0,(tl.sz.locH*20)+(40*tl.bfTiles), (tl.sz.locV*20)+(40*tl.bfTiles))
       
@@ -1010,9 +1010,11 @@ on drawATileTile(q: number, c: number, l: number, tl, frntImg: image, dt: list)
         end if
       end if
       
-      
-      frntImg.copyPixels(tileImage, rct, gtRect + rect(gtRect.width*(rnd-1), 0, gtRect.width*(rnd-1), 0)+rect(0,1,0,1), {#ink:36})
-      
+      if (offsL = 0) then
+        frntImg.copyPixels(tileImage, rct, gtRect + rect(gtRect.width*(rnd-1), 0, gtRect.width*(rnd-1), 0)+rect(0,1,0,1), {#ink:36})
+      else
+        dp = restrict(dp + offsL.integer, 0, 29)
+      end if
       
       d = -1
       repeat with ps = 1 to tl.repeatL.count then

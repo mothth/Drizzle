@@ -202,6 +202,8 @@ on LRenderTileMaterial(l: number, nm: string, frntImg)
 end
 
 on LRenderPatternMaterial(l: number, nm: string, frntImg)
+  global gEEprops
+
   -- Custom Temple Stone and Tiled Stone materials (made by Of Incandescence)
   if (DRCustomMatList.count >= 1) then
     matTl = DRCustomMatList[DRLastTL]
@@ -217,6 +219,79 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
     end if
 
     if (matTl.nm = nm) then
+
+      -- Search for Pattern Depth / Chaos effects
+      -- Actually a list of matrices, in case one adds more than one instance of the effect on the same layer
+      depthMtrx: list = []
+      chaosMtrx: list = []
+      repeat with q = 1 to gEEprops.effects.count then
+        eff = gEEprops.effects[q]
+        case eff.nm of
+          "Pattern Depth":
+            case eff.options[2][3] of --["1", "2", "3"]
+              "1":
+                dmin = 1
+              "2":
+                dmin = 2
+              "3":
+                dmin = 3
+              otherwise:
+                dmin = 1
+            end case
+
+            if (dmin = l) then
+              case eff.options[3][3] of
+                "Increase":
+                  mode = false
+                "Decrease":
+                  mode = true
+                otherwise:
+                  mode = false
+              end case
+              depthMtrx.add([eff.mtrx, mode])
+            end if
+
+          "Pattern Chaos":
+            octaves = 1
+            effSeed = 1
+
+            repeat with op in eff.options
+              case op[1] of
+                "Layers":
+                  case op[3] of--["All", "1", "2", "3", "1:st and 2:nd", "2:nd and 3:rd"]
+                    "1":
+                      dmin = 1
+                      dmax = 1
+                    "2":
+                      dmin = 2
+                      dmax = 2
+                    "3":
+                      dmin = 3
+                      dmax = 3
+                    "1:st and 2:nd":
+                      dmin = 1
+                      dmax = 2
+                    "2:nd and 3:rd":
+                      dmin = 2
+                      dmax = 3
+                    otherwise:
+                      dmin = 1
+                      dmax = 3
+                  end case
+                
+                "Noise Octaves":
+                  octaves = value(op[3])
+                
+                "Seed":
+                  effSeed = op[3]
+              end case
+            end repeat
+
+            if (l >= dmin) and (l <= dmax) then
+              chaosMtrx.add([eff.mtrx, octaves, effSeed])
+            end if
+        end case
+      end repeat
 
       matInfo = matTl.pattern
       pickPatterns: list = []
@@ -403,7 +478,7 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
               end repeat
 
               if (drawn) then
-                frntImg = drawATileTile(drawPos.locH, drawPos.locV, l, tl, frntImg)
+                frntImg = LDrawADepthTile(drawPos, l, tl, frntImg, depthMtrx, chaosMtrx)
                 
                 -- Corners
                 if (patTl.count > 2) then
@@ -439,7 +514,7 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
           -- patternCorners[1].deleteAt(ind)
           next repeat
         end if
-        frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, geoTiles[4], frntImg)
+        frntImg = LDrawADepthTile(tlPos, l, geoTiles[4], frntImg, depthMtrx, chaosMtrx)
       end repeat
 
       repeat with q = 1 to patternCorners[2].count then
@@ -451,17 +526,17 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
           -- patternCorners[2].deleteAt(ind)
           next repeat
         end if
-        frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, geoTiles[3], frntImg)
+        frntImg = LDrawADepthTile(tlPos, l, geoTiles[3], frntImg, depthMtrx, chaosMtrx)
       end repeat
 
       repeat with q = 1 to patternCorners[3].count then
         tlPos = patternCorners[3][q]
-        frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, geoTiles[2], frntImg)
+        frntImg = LDrawADepthTile(tlPos, l, geoTiles[2], frntImg, depthMtrx, chaosMtrx)
       end repeat
 
       repeat with q = 1 to patternCorners[4].count then
         tlPos = patternCorners[4][q]
-        frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, geoTiles[1], frntImg)
+        frntImg = LDrawADepthTile(tlPos, l, geoTiles[1], frntImg, depthMtrx, chaosMtrx)
       end repeat
 
       -- Prepare for final draw and draw remaining slopes and floors
@@ -473,7 +548,7 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
             -- Add to final draw list
             tls2.append(tl)
           else if (geo > 1) and (geo < 7) then
-            frntImg = drawATileTile(tl.locH, tl.locV,l, geoTiles[geo - 1], frntImg)
+            frntImg = LDrawADepthTile(tl, l, geoTiles[geo - 1], frntImg, depthMtrx, chaosMtrx)
             delL[tl] = 1
           end if
         end if
@@ -510,7 +585,7 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
           end repeat
 
           if (drawn) then
-            frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, tl, frntImg)
+            frntImg = LDrawADepthTile(tlPos, l, tl, frntImg, depthMtrx, chaosMtrx)
             repeat with q = 1 to occupy.count then
               delL[tlPos + occupy[q]] = 1
             end repeat
@@ -524,6 +599,44 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
     end if
   end if
   return frntImg
+end
+
+-- Primarily intended for LRenderPatternMaterial, hence why it's here
+--  depthMtrx = [[<matrix>, <mode> (FALSE = decrease, TRUE = increase)], ...]
+--  chaosMtrx = [[<matrix>, <octaves>, <seed>], ...]
+on LDrawADepthTile(loc: point, l: number, tl, frntImg: image, depthMtrx: list, chaosMtrx: list)
+  offs: number = 0
+  effLoc: point = loc
+  effLoc.locH = restrict(effLoc.locH, 1, gLOprops.size.locH)
+  effLoc.locV = restrict(effLoc.locV, 1, gLOprops.size.locV)
+
+  -- Contribution from Pattern Depth
+  repeat with mtrx in depthMtrx
+    if (mtrx[2] = false) then
+      offs = offs + (mtrx[1][effLoc.locH][effLoc.locV].float / 10.0)
+    else
+      offs = offs - (mtrx[1][effLoc.locH][effLoc.locV].float / 10.0)
+    end if
+  end repeat
+
+  -- Contribution from Pattern Chaos
+  repeat with mtrx in chaosMtrx
+    savSeed: number = the randomSeed
+    octaves: number = mtrx[2]
+    noiseVal: number = 0.0
+    seedLoc = effLoc
+
+    repeat with q = 1 to octaves
+      the randomSeed = seedForTile(seedLoc, mtrx[3] + q)
+      noiseVal = noiseVal * 0.5 + ((random(10)-5) / 10.0)
+      seedLoc = floorPoint(seedLoc * 0.5)
+    end repeat
+
+    offs = offs + noiseVal * (mtrx[1][effLoc.locH][effLoc.locV].float / 10.0)
+    the randomSeed = savSeed
+  end repeat
+
+  return drawATileTile(loc.locH, loc.locV, l, tl, frntImg, [], offs)
 end
 
 on LDrawATileMaterial(q, c, l, nm) --frntImg,

@@ -680,6 +680,14 @@ on newEffect me
       ef.options.add(["Color", ["Color1", "Color2", "Dead"], "Color2"])
       ef.options.add(["Require In-Bounds", ["Yes", "No"], ["No", "Yes"][getBoolConfig("Sky roots fix") + 1]])
       ef.crossScreen = 1
+    
+    "Pattern Depth":
+      ef.options.add(["Layer", ["1", "2", "3"], "1"])
+      ef.options.add(["Mode", ["Increase", "Decrease"], "Increase"])
+    
+    "Pattern Chaos":
+      ef.options.add(["Layers", ["All", "1", "2", "3", "1:st and 2:nd", "2:nd and 3:rd"], "All"])
+      ef.options.add(["Noise Octaves", ["1", "2", "3", "4"], "1"])
       
     otherwise:
       if gCustomEffects.getPos(ef.nm) > 0 then

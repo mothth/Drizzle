@@ -801,6 +801,10 @@ on exitFrame me
     gEffects[gEffects.count].efs.add( [#nm:"Meat Blobs"])
     gEffects[gEffects.count].efs.add( [#nm:"Brain Growers"])
     gEffects[gEffects.count].efs.add( [#nm:"Upside Down Brain Growers"])
+
+    gEffects.add([#nm:"Material", #efs:[]])
+    gEffects[gEffects.count].efs.add( [#nm:"Pattern Depth"])
+    gEffects[gEffects.count].efs.add( [#nm:"Pattern Chaos"])
     
     gEffects.add([#nm:"LB Plants", #efs:[]])
     gEffects[gEffects.count].efs.add( [#nm:"Colored Hang Roots"]    )

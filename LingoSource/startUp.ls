@@ -280,24 +280,41 @@ on exitFrame me
                 afMat.name = "initImport"
 
                 -- Make sure parts are correct
-                if (not matTl.pattern.findPos(#pattern)) then matTl.pattern[#pattern] = []
+                if (not matTl.pattern.findPos(#patterns)) then matTl.pattern[#patterns] = []
                 if (not matTl.pattern.findPos(#tiles)) then matTl.pattern[#tiles] = []
+                if (not matTl.pattern.findPos(#sz)) then matTl.pattern[#sz] = point(1,1)
 
                 -- Import information
-                importPart = 1 -- pattern by default
+                importPart = 2 -- tiles by default
                 repeat with matLnNo = 1 to the number of lines in afMat.text
                   matLn = afMat.text.line[matLnNo]
-                  if (matLn = "-Pattern") then
+                  if (matLn starts "-Pattern") then
+                    -- Multiple patterns can be defined, so each -Pattern starts a new one
                     importPart = 1
+
+                    -- Weight
+                    weight = 1
+                    if (matLn contains ":") then
+                      wOffset = offset(":", matLn)
+                      weight = value(matLn.char[(wOffset+1)..(matLn.length)])
+                    end if
+
+                    currentPattern = []
+                    matTl.pattern.patterns.append([currentPattern, weight])
+                    
                   else if (matLn = "-Tiles") then
                     importPart = 2
+
                   else if (matLn <> "") then
+                    -- Add pattern tile
                     if (importPart = 1) then
-                      matTl.pattern.pattern.append(value(matLn))
+                      currentPattern.append(value(matLn))
+                    -- Add tile
                     else
                       matTl.pattern.tiles.append(matLn)
                     end if
                   end if
+
                 end repeat
               end if
             end if

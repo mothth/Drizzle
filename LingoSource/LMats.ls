@@ -219,18 +219,26 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
     if (matTl.nm = nm) then
 
       matInfo = matTl.pattern
-      pickPattern: list = []
+      pickPatterns: list = []
       pickTiles: list = []
-      pattern: list = []
+      patterns: list = []
+      patternWeights: list = []
       tileSelection: list = []
-      repeatSize = point(0,0)
+      repeatSize = point(1,1)
       savSeed = the randomSeed
       the randomSeed = gLOprops.tileSeed + l
       
-      if matInfo.findPos(#pattern) then
-        pattern = matInfo.pattern.duplicate()
-        repeat with pat in pattern
-          pickPattern.add(pat[1])
+      if matInfo.findPos(#patterns) then
+        repeat with pattern in matInfo.patterns
+          pickPattern = []
+          patternData = []
+          repeat with pat in pattern[1]
+            pickPattern.add(pat[1])
+            patternData.add([pat[2]]) -- We later add data to this
+          end repeat
+          pickPatterns.add(pickPattern)
+          patterns.add(patternData)
+          patternWeights.add(pattern[2])
         end repeat
       end if
 
@@ -271,7 +279,7 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
       end repeat
       
       tlsOrdered.sort()
-      tls: list = []
+      tls = []
       repeat with q = 1 to tlsOrdered.count
         tls.add(tlsOrdered[q][2])
       end repeat
@@ -293,90 +301,130 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
           end if
 
           -- Check pattern tiles
-          pos = pickPattern.getPos(tl.nm)
-          repeat while (pos <> 0) then
-            if (pattern[pos].count = 2) then
-              pattern[pos].add(tl)
-
-              -- Check for tile slopes
-              tileCorners = []
-              repeat with speci = 1 to tl.specs.count then
-                geo = tl.specs[speci]
-                if (geo > 1) and (geo < 6) then
-                  loc = point(((speci - 1) / tl.sz.locV - 0.4999).integer, (speci - 1) mod tl.sz.locV)
-                  tileCorners.add([geo - 1, loc])
-                end if
-              end repeat
-
-              if (tileCorners.count >= 1) then
-                pattern[pos].add(tileCorners)
-              end if
-            end if
-
-            pickPattern[pos] = ""
+          repeat with pat = 1 to pickPatterns.count
+            pickPattern = pickPatterns[pat]
+            pattern = patterns[pat]
             pos = pickPattern.getPos(tl.nm)
+            repeat while (pos <> 0) then
+              if (pattern[pos].count = 1) then
+                pattern[pos].add(tl)
+
+                -- Check for tile slopes
+                tileCorners = []
+                repeat with speci = 1 to tl.specs.count then
+                  geo = tl.specs[speci]
+                  if (geo > 1) and (geo < 6) then
+                    loc = point(((speci - 1) / tl.sz.locV - 0.4999).integer, (speci - 1) mod tl.sz.locV)
+                    tileCorners.add([geo - 1, loc])
+                  end if
+                end repeat
+
+                if (tileCorners.count >= 1) then
+                  pattern[pos].add(tileCorners)
+                end if
+              end if
+
+              -- Patterns almost always have the same tile more than once
+              pickPattern[pos] = ""
+              pos = pickPattern.getPos(tl.nm)
+            end repeat
           end repeat
         end repeat
       end repeat
-
-      tls2 = tls.duplicate()
-      patternCorners = [[], [], [], []]
+      
+      patternCorners: list = [[], [], [], []]
+      patterns2: list = [[0, patterns[1]]]
+      indPos: point = point(-1, -1)
+      delL = [:]
 
       -- Draw pattern
-      repeat with q = 1 to tls2.count then
-        tlPos = tls2[q]
+      repeat with tlPos in tls
+        -- Quick discard
+        if (delL.findPos(tlPos) <> void) then
+          next repeat
+        end if
 
-        repeat with pat in pattern then
-          if (pat.count > 2) then
+        if (patterns.count > 1) then
+          indPos2 = floorPoint(tlPos / (repeatSize * 1.0))
+          if (indPos <> indPos2) then
+            indPos = indPos2
+            the randomSeed = seedForTile(indPos, gLOprops.tileSeed + l)
+            patterns2 = []
+            repeat with pat = 1 to patterns.count
+              randV = random(65536)
+              randV = power(randV.float / 65536, patternWeights[pat]) * 65536
+              patterns2.append([randV, patterns[pat]])
+            end repeat
+            patterns2.sort()
+          end if
+        end if
 
-            tl = pat[3]
-            if ((tlPos.locV mod repeatSize.locV) = pat[2].locV) then
-              if ((tlPos.locH mod repeatSize.locH) = pat[2].locH) then
+        modPos = point(tlPos.locH mod repeatSize.locH, tlPos.locV mod repeatSize.locV)
 
-                canDraw: number = 1
-                mdPnt = point(((tl.sz.locH*0.5)+0.4999).integer - 1, ((tl.sz.locV*0.5)+0.4999).integer - 1)
-                occupy = []
+        repeat with pat in patterns2 then
+          pattern = pat[2]
+          repeat with patTl in pattern then
+            if (patTl.count <= 1) then
+              next repeat
+            end if
 
-                repeat with x = 0 to tl.sz.locH-1 then
-                  repeat with y = 0 to tl.sz.locV-1 then
-                    -- Only check solid geo
-                    if (tl.specs[x * tl.sz.locV + y + 1] <> 1) then
-                      next repeat
+            tl = patTl[2]
+            mdPnt = ceilPoint(tl.sz*0.5) - point(1,1)
+            tlOffs = modPos - patTl[1]
+
+            -- Implemented this way to encourage tiles earlier in the list to be placed first (one of our materials needed this :surv_pleh:)
+            if ((tlOffs+mdPnt).inside(rect(point(0,0), tl.sz))) then
+              drawn = true
+              drawPos = tlPos - tlOffs
+              occupy = []
+
+              repeat with x = 0 to tl.sz.locH-1 then
+                repeat with y = 0 to tl.sz.locV-1 then
+                  -- Only check solid geo
+                  if (tl.specs[x * tl.sz.locV + y + 1] <> 1) then
+                    next repeat
+                  end if
+
+                  loc = point(x,y) - mdPnt
+                  if (checkIfATileIsSolidAndSameMaterial(drawPos + loc, l, nm) = 0) then
+                    drawn = false
+                    exit repeat
+                  end if
+
+                  -- Tile is already occupied
+                  if (delL.findPos(drawPos + loc) <> void) then
+                    drawn = false
+                    exit repeat
+                  end if
+
+                  occupy.add(loc)
+                end repeat
+                if (drawn = false) then exit repeat
+              end repeat
+
+              if (drawn) then
+                frntImg = drawATileTile(drawPos.locH, drawPos.locV, l, tl, frntImg)
+                
+                -- Corners
+                if (patTl.count > 2) then
+                  repeat with corner in patTl[3] then
+                    loc = drawPos + corner[2] - mdPnt
+                    if (checkIfATileIsSolidAndSameMaterial(loc, l, nm)) then
+                      patternCorners[corner[1]].add(loc)
                     end if
-
-                    loc = point(x,y) - mdPnt
-                    if (checkIfATileIsSolidAndSameMaterial(tlPos + loc, l, nm) = 0) then
-                      canDraw = 0
-                      exit repeat
-                    end if
-                    occupy.add(loc)
+                    delL[loc] = 1
                   end repeat
-                  if (canDraw = 0) then exit repeat
+                end if
+                
+                repeat with occ in occupy
+                  delL[drawPos + occ] = 1
                 end repeat
 
-                if (canDraw = 1) then
-                  frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, tl, frntImg)
-                  
-                  -- Corners
-                  if (pat.count > 3) then
-                    repeat with corner in pat[4] then
-                      loc = corner[2] - mdPnt
-                      if (checkIfATileIsSolidAndSameMaterial(tlPos + loc, l, nm)) then
-                        patternCorners[corner[1]].add(tlPos + loc)
-                      end if
-                      tls.deleteOne(tlPos + loc)
-                    end repeat
-                  end if
-                  
-                  repeat with occ = 1 to occupy.count then
-                    tls.deleteOne(tlPos + occupy[occ])
-                  end repeat
-
-                end if
+                exit repeat
               end if
             end if
-          end if
-          
+            
+          end repeat
         end repeat
       end repeat
 
@@ -416,25 +464,25 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
         frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, geoTiles[1], frntImg)
       end repeat
 
-      -- Draw remaining slopes and floors
-      cnt = tls.count
-      repeat with q = 1 to cnt then
-        tl = tls[cnt + 1 - q]
-        geo = afaMvLvlEdit(point(tl.locH, tl.locV), l)
-        if (geo > 1) and (geo < 7) then
-          frntImg = drawATileTile(tl.locH,tl.locV,l, geoTiles[geo - 1], frntImg)
-          tls.deleteAt(cnt + 1 - q)
-        else if (geo <> 1) then
-          tls.deleteAt(cnt + 1 - q)
+      -- Prepare for final draw and draw remaining slopes and floors
+      tls2 = []
+      repeat with tl in tls
+        if (delL.findPos(tl) = void) then
+          geo = afaMvLvlEdit(point(tl.locH, tl.locV), l)
+          if (geo = 1) then
+            -- Add to final draw list
+            tls2.append(tl)
+          else if (geo > 1) and (geo < 7) then
+            frntImg = drawATileTile(tl.locH, tl.locV,l, geoTiles[geo - 1], frntImg)
+            delL[tl] = 1
+          end if
         end if
       end repeat
 
       -- Draw everything else
-      repeat while tls.count > 0 then
-        tlPos = tls[random(tls.count)]
- 
+      repeat with tlPos in tls2
         repeat with tl in tileSelection
-          if (tl = []) then
+          if (tl = void) then
             next repeat
           end if
 
@@ -445,11 +493,17 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
           repeat with x = 0 to tl.sz.locH-1 then
             repeat with y = 0 to tl.sz.locV-1 then
               loc = point(x,y) - mdPnt
-              if (checkIfATileIsSolidAndSameMaterial(tlPos + loc, l, nm) = 0) or \
-                (tls.getPos(tlPos + loc) = 0) then
+
+              if (checkIfATileIsSolidAndSameMaterial(tlPos + loc, l, nm) = 0) then
                 drawn = false
                 exit repeat
               end if
+
+              if (delL.findPos(tlPos + loc) <> void) then
+                drawn = false
+                exit repeat
+              end if
+
               occupy.add(loc)
             end repeat
             if (drawn = false) then exit repeat
@@ -458,15 +512,14 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
           if (drawn) then
             frntImg = drawATileTile(tlPos.locH, tlPos.locV, l, tl, frntImg)
             repeat with q = 1 to occupy.count then
-              tls.deleteOne(tlPos + occupy[q])
+              delL[tlPos + occupy[q]] = 1
             end repeat
             exit repeat
           end if
 
         end repeat
-
-        tls.deleteOne(tlPos)
       end repeat
+      the randomSeed = savSeed
 
     end if
   end if

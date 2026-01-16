@@ -279,7 +279,7 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
                       dmax = 3
                   end case
                 
-                "Noise Octaves":
+                "Noise Smoothness":
                   octaves = value(op[3])
                 
                 "Seed":
@@ -478,7 +478,7 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
               end repeat
 
               if (drawn) then
-                frntImg = LDrawADepthTile(drawPos, l, tl, frntImg, depthMtrx, chaosMtrx)
+                frntImg = LDrawADepthTile(drawPos, l, tl, frntImg, depthMtrx, chaosMtrx, occupy)
                 
                 -- Corners
                 if (patTl.count > 2) then
@@ -585,7 +585,7 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
           end repeat
 
           if (drawn) then
-            frntImg = LDrawADepthTile(tlPos, l, tl, frntImg, depthMtrx, chaosMtrx)
+            frntImg = LDrawADepthTile(tlPos, l, tl, frntImg, depthMtrx, chaosMtrx, occupy)
             repeat with q = 1 to occupy.count then
               delL[tlPos + occupy[q]] = 1
             end repeat
@@ -604,22 +604,32 @@ end
 -- Primarily intended for LRenderPatternMaterial, hence why it's here
 --  depthMtrx = [[<matrix>, <mode> (FALSE = decrease, TRUE = increase)], ...]
 --  chaosMtrx = [[<matrix>, <octaves>, <seed>], ...]
-on LDrawADepthTile(loc: point, l: number, tl, frntImg: image, depthMtrx: list, chaosMtrx: list)
+-- occupy is optional, and specifies extra tiles to sample, relative to `loc`.
+on LDrawADepthTile(loc: point, l: number, tl, frntImg: image, depthMtrx: list, chaosMtrx: list, occupy: list)
   offs: number = 0
   effLoc: point = loc
   effLoc.locH = restrict(effLoc.locH, 1, gLOprops.size.locH)
   effLoc.locV = restrict(effLoc.locV, 1, gLOprops.size.locV)
+  if (occupy.count <= 1) then
+    occupy = [point(0,0)]
+  end if
 
   -- Contribution from Pattern Depth
   repeat with mtrx in depthMtrx
-    if (mtrx[2] = false) then
-      offs = offs + (mtrx[1][effLoc.locH][effLoc.locV].float / 10.0)
-    else
-      offs = offs - (mtrx[1][effLoc.locH][effLoc.locV].float / 10.0)
-    end if
+    repeat with occ in occupy
+      loc2 = point(restrict(loc.locH + occ.locH, 1, gLOprops.size.locH), restrict(loc.locV + occ.locV, 1, gLOprops.size.locV))
+      if (mtrx[2] = false) then
+        offs = offs + (mtrx[1][loc2.locH][loc2.locV].float / 10.0)
+      else
+        offs = offs - (mtrx[1][loc2.locH][loc2.locV].float / 10.0)
+      end if
+    end repeat
   end repeat
+  offs = offs / occupy.count
 
   -- Contribution from Pattern Chaos
+  -- TODO: Add bilinear filtering for octave noise? May not be worth it
+  -- Could add the multi-cell contribution like with Pattern Depth, but may smooth the noise too much for larger values
   repeat with mtrx in chaosMtrx
     savSeed: number = the randomSeed
     octaves: number = mtrx[2]

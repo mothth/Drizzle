@@ -687,7 +687,7 @@ on newEffect me
     
     "Pattern Chaos":
       ef.options.add(["Layers", ["All", "1", "2", "3", "1:st and 2:nd", "2:nd and 3:rd"], "All"])
-      ef.options.add(["Noise Octaves", ["1", "2", "3", "4"], "1"])
+      ef.options.add(["Noise Smoothness", ["1", "2", "3", "4"], "1"])
       
     otherwise:
       if gCustomEffects.getPos(ef.nm) > 0 then

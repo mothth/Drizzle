@@ -514,7 +514,7 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
           -- patternCorners[1].deleteAt(ind)
           next repeat
         end if
-        frntImg = LDrawADepthTile(tlPos, l, geoTiles[4], frntImg, depthMtrx, chaosMtrx)
+        frntImg = LDrawADepthTile(tlPos, l, geoTiles[4], frntImg, depthMtrx, chaosMtrx, [])
       end repeat
 
       repeat with q = 1 to patternCorners[2].count then
@@ -526,17 +526,17 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
           -- patternCorners[2].deleteAt(ind)
           next repeat
         end if
-        frntImg = LDrawADepthTile(tlPos, l, geoTiles[3], frntImg, depthMtrx, chaosMtrx)
+        frntImg = LDrawADepthTile(tlPos, l, geoTiles[3], frntImg, depthMtrx, chaosMtrx, [])
       end repeat
 
       repeat with q = 1 to patternCorners[3].count then
         tlPos = patternCorners[3][q]
-        frntImg = LDrawADepthTile(tlPos, l, geoTiles[2], frntImg, depthMtrx, chaosMtrx)
+        frntImg = LDrawADepthTile(tlPos, l, geoTiles[2], frntImg, depthMtrx, chaosMtrx, [])
       end repeat
 
       repeat with q = 1 to patternCorners[4].count then
         tlPos = patternCorners[4][q]
-        frntImg = LDrawADepthTile(tlPos, l, geoTiles[1], frntImg, depthMtrx, chaosMtrx)
+        frntImg = LDrawADepthTile(tlPos, l, geoTiles[1], frntImg, depthMtrx, chaosMtrx, [])
       end repeat
 
       -- Prepare for final draw and draw remaining slopes and floors
@@ -548,7 +548,7 @@ on LRenderPatternMaterial(l: number, nm: string, frntImg)
             -- Add to final draw list
             tls2.append(tl)
           else if (geo > 1) and (geo < 7) then
-            frntImg = LDrawADepthTile(tl, l, geoTiles[geo - 1], frntImg, depthMtrx, chaosMtrx)
+            frntImg = LDrawADepthTile(tl, l, geoTiles[geo - 1], frntImg, depthMtrx, chaosMtrx, [])
             delL[tl] = 1
           end if
         end if
@@ -604,7 +604,7 @@ end
 -- Primarily intended for LRenderPatternMaterial, hence why it's here
 --  depthMtrx = [[<matrix>, <mode> (FALSE = decrease, TRUE = increase)], ...]
 --  chaosMtrx = [[<matrix>, <octaves>, <seed>], ...]
--- occupy is optional, and specifies extra tiles to sample, relative to `loc`.
+-- occupy specifies extra tiles to sample, relative to `loc`.
 on LDrawADepthTile(loc: point, l: number, tl, frntImg: image, depthMtrx: list, chaosMtrx: list, occupy: list)
   offs: number = 0
   effLoc: point = loc

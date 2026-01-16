@@ -629,7 +629,7 @@ on LDrawADepthTile(loc: point, l: number, tl, frntImg: image, depthMtrx: list, c
 
   -- Contribution from Pattern Chaos
   -- TODO: Add bilinear filtering for octave noise? May not be worth it
-  -- Could add the multi-cell contribution like with Pattern Depth, but may smooth the noise too much for larger values
+  -- Could add the multi-cell contribution like with Pattern Depth, but may smooth the noise too much for larger tiles
   repeat with mtrx in chaosMtrx
     savSeed: number = the randomSeed
     octaves: number = mtrx[2]

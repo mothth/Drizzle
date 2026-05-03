@@ -411,36 +411,47 @@ on LRenderPatternMaterial(l, nm, frntImg)
       end repeat
 
       patternCorners = [[], [], [], []]
-      patterns2 = [[0, patterns[1]]]
-      indPos = point(-1, -1)
+      patternTest = patterns
+      patternTestList = [:]
       delL = [:]
 
       -- Draw pattern
       repeat with tlPos in tls
-        -- Quick discard
-        if (delL.findPos(tlPos) <> void) then
-          next repeat
-        end if
+        -- Patched out - caused a bug because tiles can obviously have non-solid geo on their centre tile, which will get wrongly discarded because of this.
+        -- -- Quick discard
+        -- if (delL.findPos(tlPos) <> void) then
+        --   next repeat
+        -- end if
 
         if (patterns.count > 1) then
-          indPos2 = floorPoint(tlPos / (repeatSize * 1.0))
-          if (indPos <> indPos2) then
-            indPos = indPos2
+          indPos = floorPoint(tlPos / (repeatSize * 1.0))
+          if (patternTestList.findPos(indPos) <> void) then
+            patternTest = patternTestList[indPos]
+          else
+            -- Build test list for repeat
             the randomSeed = seedForTile(indPos, gLOprops.tileSeed + l)
+
             patterns2 = []
+            patternTest = []
+
             repeat with pat = 1 to patterns.count
               randV = random(65536)
-              randV = power(randV.float / 65536, patternWeights[pat]) * 65536
+              randV = power(randV.float / 65536, patternWeights[pat])
               patterns2.append([randV, patterns[pat]])
             end repeat
             patterns2.sort()
+
+            repeat with pat in patterns2
+              patternTest.append(pat[2])
+            end repeat
+            
+            patternTestList[indPos] = patternTest
           end if
         end if
 
         modPos = point(tlPos.locH mod repeatSize.locH, tlPos.locV mod repeatSize.locV)
 
-        repeat with pat in patterns2 then
-          pattern = pat[2]
+        repeat with pattern in patternTest then
           repeat with patTl in pattern then
             if (patTl.count <= 1) then
               next repeat
